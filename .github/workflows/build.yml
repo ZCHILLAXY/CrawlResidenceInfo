@@ -1,0 +1,54 @@
+name: Multi-Platform Build
+
+on:
+  push:
+    tags:
+      - 'v*'  # 当推送版本标签时触发
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            output_name: myapp-windows.exe
+            extension: .exe
+          - os: ubuntu-latest
+            output_name: myapp-linux
+            extension: ''
+          - os: macos-latest
+            output_name: myapp-macos
+            extension: ''
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+      shell: bash
+
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --onefile gui.py
+        # 重命名输出文件
+        mv dist/main${{ matrix.extension }} dist/${{ matrix.output_name }}
+      shell: bash
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.output_name }}
+        path: dist/${{ matrix.output_name }}
