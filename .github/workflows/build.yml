@@ -3,7 +3,7 @@ name: Multi-Platform Build
 on:
   push:
     tags:
-      - 'v*'  # 当推送版本标签时触发
+      - 'v*'
 
 jobs:
   build:
@@ -13,13 +13,10 @@ jobs:
         include:
           - os: windows-latest
             output_name: myapp-windows.exe
-            extension: .exe
           - os: ubuntu-latest
             output_name: myapp-linux
-            extension: ''
           - os: macos-latest
             output_name: myapp-macos
-            extension: ''
 
     runs-on: ${{ matrix.os }}
 
@@ -42,9 +39,20 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile gui.py
-        # 重命名输出文件
-        mv dist/main${{ matrix.extension }} dist/${{ matrix.output_name }}
+        # 方法A：直接指定输出文件名
+        pyinstaller --onefile --name ${{ matrix.output_name }} gui.py
+        
+        # 方法B：或者用原来的方式，但要正确重命名
+        # pyinstaller --onefile gui.py
+        # if [ "${{ runner.os }}" = "Windows" ]; then
+        #   mv dist/gui.exe dist/${{ matrix.output_name }}
+        # else
+        #   mv dist/gui dist/${{ matrix.output_name }}
+        # fi
+        
+        # 验证文件是否生成
+        echo "Contents of dist directory:"
+        ls -la dist/
       shell: bash
 
     - name: Upload artifact
