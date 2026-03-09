@@ -239,7 +239,7 @@ class ResidencePointGUI:
             defaultextension=".xlsx",
             filetypes=[("Excel文件", "*.xlsx *.xls"), ("所有文件", "*.*")],
             initialdir=self.config.get('last_output_dir', os.path.expanduser("~")),
-            initialfile=f"查询结果_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"
+            initialfile=f'查询结果_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
         )
         if filename:
             self.output_file_path.set(filename)
