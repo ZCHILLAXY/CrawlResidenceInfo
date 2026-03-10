@@ -40,10 +40,10 @@ jobs:
     - name: Build with PyInstaller
       run: |
         # 方法A：直接指定输出文件名
-        pyinstaller --onefile --name ${{ matrix.output_name }} gui.py
+        pyinstaller --onefile --noconsole --name ${{ matrix.output_name }} gui.py
         
         # 方法B：或者用原来的方式，但要正确重命名
-        # pyinstaller --onefile gui.py
+        # pyinstaller --onefile --noconsole gui.py
         # if [ "${{ runner.os }}" = "Windows" ]; then
         #   mv dist/gui.exe dist/${{ matrix.output_name }}
         # else
