@@ -45,7 +45,7 @@ class ResidencePointsCrawler:
             captcha = image_to_string(captcha_img, config='--psm 8 --oem 3')
             captcha = captcha.strip().replace(" ", "")
 
-            if len(captcha) == 4 and captcha.isdigit():
+            if len(captcha) == 4:
                 return captcha
             else:
                 self.logger.debug(f"No matched captcha: {captcha}")

@@ -5,6 +5,7 @@ Made with ❤️by Z🐻
 import logging
 from typing import List, Dict, Any, Optional
 from pathlib import Path
+import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -22,59 +23,52 @@ class ExcelHandler:
             raise FileNotFoundError(f"文件不存在 {file_path}")
 
         try:
-            workbook = openpyxl.load_workbook(file_path, read_only=True)
-            sheet = workbook.active
+            df = pd.read_excel(file_path, engine=None, dtype=str)
+
+            headers = [str(col).strip() for col in df.columns]
+            self.logger.info(f"检测到表头 {headers}")
+
+            if '姓名' not in headers and 'name' not in headers:
+                raise ValueError("Excel should have '姓名' or 'name' column")
+            if '身份证号' not in headers and 'pid' not in headers:
+                raise ValueError("Excel should have '身份证号' or 'pid' column")
 
             parent_info_list = []
-            headers = None
 
-            for row_idx, row in enumerate(sheet.iter_rows(values_only=True), start=1):
-                if not any(row):
-                    continue
+            name_col = '姓名' if '姓名' in headers else 'name'
+            pid_col = '身份证号' if '身份证号' in headers else 'pid'
 
-                if headers is None:
-                    headers = [str(cell).strip() if cell else '' for cell in row]
+            for idx, row in df.iterrows():
+                name = str(row[name_col]) if pd.notna(row[name_col]) else ''
+                name = name.strip()
 
-                    if '姓名' not in headers and 'name' not in headers:
-                        raise ValueError("Excel should have '姓名' or 'name' column")
-                    if '身份证号' not in headers and 'pid' not in headers:
-                        raise ValueError("Excel should have '身份证号' or 'pid' column")
-
-                    self.logger.info(f"Identify headers: {headers}")
-                    continue
-
-                row_data = {}
-                for col_idx, cell_value in enumerate(row):
-                    if col_idx < len(headers) and headers[col_idx]:
-                        row_data[headers[col_idx]] = str(cell_value).strip() if cell_value else ''
-
-                name = row_data.get('姓名') or row_data.get('name', '').strip()
-                pid = row_data.get('身份证号') or row_data.get('pid', '').strip()
+                pid = str(row[pid_col]) if pd.notna(row[pid_col]) else ''
+                pid = pid.strip()
 
                 if not name or not pid:
-                    self.logger.warning(f"The data on {row_idx} is not complete, skip {row_idx}")
+                    self.logger.warning(f"The {idx + 2} data is not complete, Skip.")
                     continue
 
                 if len(pid) not in [15, 18]:
-                    self.logger.warning(f"The pid format on {row_idx} is wrong: {pid}")
+                    self.logger.warning(f"The pid format on {idx + 2} is wrong: {pid}")
                     continue
 
                 parent_info_list.append({
                     'name': name,
                     'pid': pid,
-                    'row_number': row_idx
+                    'row_number': idx + 2
                 })
 
-            workbook.close()
-
-            self.logger.info(f"Successfully read {len(parent_info_list)} parent infos")
+            self.logger.info(f"Successfully loaded {len(parent_info_list)} infos.")
             return parent_info_list
 
-        except openpyxl.utils.exceptions.InvalidException:
-            raise ValueError(f"Invalid Excel file: {file_path}")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"No Existing File: {file_path}")
+        except ValueError as e:
+            raise ValueError(str(e))
         except Exception as e:
             self.logger.error(f"Read Excel file failed: {str(e)}")
-            raise
+            raise ValueError(f"Invalid file or format error: {str(e)}")
 
     def write_results(self, output_path: str, parent_info_list: List[Dict[str, str]], query_results: List[Dict[str, Any]]) -> None:
         if len(parent_info_list) != len(query_results):
@@ -101,7 +95,7 @@ class ExcelHandler:
 
             headers = ['序号', '姓名', '身份证号', '查询状态', '积分信息', '错误信息']
             for col_idx, header in enumerate(headers, start=1):
-                cell = sheet.cell(row=2, column=col_idx)
+                cell = sheet.cell(row=1, column=col_idx)
                 cell.value = header
                 cell.font = header_font
                 cell.fill = header_fill
@@ -203,32 +197,28 @@ class ExcelHandler:
             if not file_path.exists():
                 return False, "文件不存在"
 
-            if file_path.suffix.lower() not in ['.xlsx', '.xls', 'xlsm']:
+            if file_path.suffix.lower() not in ['.xlsx', '.xls', '.xlsm']:
                 return False, "不支持文件格式，请用.xlsx或.xls文件"
 
             try:
-                workbook = openpyxl.load_workbook(file_path, read_only=True)
-                sheet = workbook.active
+                df = pd.read_excel(file_path, engine=None, nrows=1)
 
-                if sheet.max_row < 2:
-                    workbook.close()
-                    return False, "文件内容为空，或者只存在表头"
+                if df.empty:
+                    return False, "文件内容为空"
 
-                headers = [str(cell).strip() if cell else '' for cell in next(sheet.iter_rows(values_only=True))]
+                headers = [str(col).strip() for col in df.columns]
 
                 if '姓名' not in headers and 'name' not in headers:
-                    workbook.close()
                     return False, "缺少'姓名'列"
 
                 if '身份证号' not in headers and 'pid' not in headers:
-                    workbook.close()
                     return False, "缺少'身份证号'列"
 
-                workbook.close()
                 return True, None
 
             except openpyxl.utils.exceptions.InvalidFileException:
                 return False, "无效的Excel文件"
+
         except Exception as e:
             return False, f"验证失败 {str(e)}"
 

@@ -190,7 +190,7 @@ class ResidencePointGUI:
         self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         text_handler = TextHandler(self.log_text)
-        text_handler.setFormatter(logging.Formatter('%(asctime)s - %(leveltime)s - %(message)s', datefmt='%H:%M:%S'))
+        text_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S'))
         logging.getLogger().addHandler(text_handler)
 
     def _create_status_bar(self, parent):
